@@ -22,15 +22,23 @@ class autofb:
     def login(self, data, type):
         self.driver.get('https://www.facebook.com/')
         if type == 'cookie':
-            for cookie in data:
-                self.driver.add_cookie(cookie)
+            cookies = data['cookie'].split(';')
+            for cookie in cookies:
+                try:
+                    cookie = cookie.split('=')
+                    self.driver.add_cookie({
+                        'name': cookie[0],
+                        'value': cookie[1]
+                    })
+                except:
+                    pass
         if type == 'account':
             emailInput = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "email")))
             passwordInput = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "pass")))
             emailInput.send_keys(data['username'])
             passwordInput.send_keys(data['password'])
-            loginButton = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "u_0_b")))
-            loginButton.click()
+            
+            webdriver.ActionChains(self.driver).send_keys(Keys.ENTER).perform()
             #check 2fa
             try:
                 codeInput = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "approvals_code")))
@@ -40,14 +48,24 @@ class autofb:
                 if r.status_code == 200:
                     codeInput.send_keys(r.text)
                     submitButton.click()
+                else:
+                    return False
             except:
                 pass
-            for x in range(4):
+            for x in range(6):
                 try:
                     submitButton = WebDriverWait(self.driver, 4).until(EC.presence_of_element_located((By.ID, "checkpointSubmitButton")))
                     submitButton.click()
+                    time.sleep(3)
                 except:
                     break
+        try:
+            self.driver.get('https://www.facebook.com/')
+            userNav = WebDriverWait(self.driver, 4).until(EC.presence_of_element_located((By.ID, "userNav")))
+            return True
+        except:
+            return False
+        
     def addCredit(self, creditCard):
         self.driver.get('https://www.facebook.com/ads/manager/account_settings/account_billing/')
         #wait button show
@@ -96,3 +114,6 @@ class autofb:
         elm = self.driver.find_element_by_xpath("//input[@type='file']")
         elm.send_keys(os.getcwd() + "/icon.png")
         time.sleep(1000)
+    def quit(self):
+        self.driver.stop_client()
+        self.driver.close()
